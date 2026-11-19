@@ -42,6 +42,7 @@ public final class IppServer implements Closeable {
     private final ExecutorService printQueue=Executors.newSingleThreadExecutor();
     private Thread acceptThread;
     private ServerSocket socket;
+    private volatile long startedAtNanos;
 
     public static class Job {
         public final int id;
@@ -63,6 +64,7 @@ public final class IppServer implements Closeable {
     public synchronized void start() throws IOException {
         if (alive.get()) return;
         socket=new ServerSocket(PORT,8);
+        startedAtNanos=System.nanoTime();
         alive.set(true);
         acceptThread=new Thread(()->{
             while(alive.get()) try {
@@ -199,11 +201,20 @@ public final class IppServer implements Closeable {
         w.string(Ipp.URI,"printer-uri-supported",uri);
         w.string(Ipp.KEYWORD,"uri-authentication-supported","none");
         w.string(Ipp.KEYWORD,"uri-security-supported","none");
+        // Core IPP/2.0 printer description attributes queried by CUPS/macOS.
+        w.string(Ipp.CHARSET,"charset-configured","utf-8");
+        w.string(Ipp.CHARSET,"charset-supported","utf-8");
+        w.string(Ipp.LANGUAGE,"generated-natural-language-supported","en");
+        w.string(Ipp.LANGUAGE,"natural-language-configured","en");
         w.string(Ipp.NAME,"printer-name","SUNMI V2 Receipt");
         w.string(Ipp.TEXT,"printer-info","58 mm roll / 48 mm print area / 203 dpi thermal");
         w.string(Ipp.TEXT,"printer-make-and-model","SUNMI V2 Thermal 58mm");
-        w.string(Ipp.KEYWORD,"printer-location","LAN");
+        w.string(Ipp.TEXT,"printer-location","LAN");
+        w.string(Ipp.URI,"printer-more-info","http://"+NetworkUtils.localIp()+":"+PORT+"/");
+        long upSeconds=Math.max(0L,(System.nanoTime()-startedAtNanos)/1_000_000_000L);
+        w.integer(Ipp.INTEGER,"printer-up-time",(int)Math.min(Integer.MAX_VALUE,upSeconds));
         w.string(Ipp.KEYWORD,"ipp-versions-supported","1.1");
+        w.string(Ipp.KEYWORD,"ipp-versions-supported","2.0");
         w.integer(Ipp.ENUM,"operations-supported",Ipp.PRINT_JOB);
         for(int op:new int[]{Ipp.VALIDATE_JOB,Ipp.CANCEL_JOB,Ipp.GET_JOB_ATTRIBUTES,
                 Ipp.GET_JOBS,Ipp.GET_PRINTER_ATTRIBUTES})w.integer(Ipp.ENUM,"operations-supported",op);

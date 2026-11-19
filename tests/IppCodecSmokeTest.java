@@ -35,7 +35,15 @@ public class IppCodecSmokeTest {
         check(parsed.id==123,"Response request ID");
         check("SUNMI V2 Receipt".equals(parsed.string("printer-name","")),"Response name");
         check(parsed.attrs.containsKey("media-col-default"),"Paper collection");
-        System.out.println("PASS: IPP attributes and payload binary codec");
+        // CUPS get-printer-attributes.test issues IPP/2.0; reply must match.
+        ByteArrayOutputStream v2request=new ByteArrayOutputStream();
+        DataOutputStream v2=new DataOutputStream(v2request);
+        v2.writeByte(2);v2.writeByte(0);v2.writeShort(Ipp.GET_PRINTER_ATTRIBUTES);
+        v2.writeInt(321);v2.writeByte(Ipp.END);v2.flush();
+        Ipp.Request req2=Ipp.read(new ByteArrayInputStream(v2request.toByteArray()));
+        byte[] reply2=new Ipp.Reply(req2,Ipp.OK).finish();
+        check(reply2[0]==2 && reply2[1]==0 && reply2[7]==65,"IPP/2.0 response version and request ID");
+        System.out.println("PASS: IPP/1.1 and IPP/2.0 response versions, collections, payload codec");
     }
     static void writeString(DataOutputStream o,int type,String name,String value)throws IOException {
         byte[] n=name.getBytes(StandardCharsets.US_ASCII);

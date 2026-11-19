@@ -1,6 +1,6 @@
 # SUNMI V2 Network Printer (experimental)
 
-An Android 7.1-compatible print-server app that exposes the **built-in SUNMI V2 thermal printer** to computers over a local network using **IPP 1.1**. The source is provided for building and testing on a real device.
+An Android 7.1-compatible print-server app that exposes the **built-in SUNMI V2 thermal printer** to computers over a local network using **IPP 1.1/2.0**. The source is provided for building and testing on a real device.
 
 ## Features
 
@@ -12,6 +12,7 @@ An Android 7.1-compatible print-server app that exposes the **built-in SUNMI V2 
 - Prints in memory-bounded, 256-row bands, avoiding a huge bitmap on the V2's limited memory.
 - Uses SUNMI's maintained `com.sunmi:printerlibrary:1.0.24` dependency. No root required.
 - IPP status and jobs; simple health endpoint at `/health`; persistent Android foreground service while enabled.
+- IPP/2.0 replies and core printer attributes required by CUPS `get-printer-attributes.test` (added in v0.2).
 
 ## Build
 
@@ -47,7 +48,7 @@ Verify reachability by visiting `http://SUNMI_IP:8631/health` from your computer
 
 ## Current limitations / caveats
 
-This is a **first implementation, not device-tested or fully IPP Everywhere certified**.
+This is a **first implementation, not fully device-tested or IPP Everywhere certified**. The IPP/2.0 capability response fixes the concrete CUPS version/attribute test failure, but does not establish complete driverless/AirPrint compatibility.
 
 - The original V2 runs Android 7.1. On that version, `NsdManager` cannot advertise the `_universal._sub._ipp._tcp` subtype required for reliable iOS AirPrint discovery. This build should not be advertised as an iPhone AirPrint solution.
 - IPP `Print-Job`, `Validate-Job`, `Cancel-Job`, `Get-Job-Attributes`, `Get-Jobs`, and `Get-Printer-Attributes` are implemented. Not every advanced IPP operation or raster format is supported.
@@ -68,3 +69,15 @@ The Android foreground service binds `InnerPrinterManager` to `SunmiPrinterServi
 - [SUNMI Printer Developer Docs](https://file.cdn.sunmi.com/SUNMIDOCS/SunmiPrinter-Developer-Docs-1-1.pdf)
 - [SUNMI V2 developer notes, including recent SDK compatibility caveats](https://github.com/zeck00/sunmi-v2-rescue/blob/main/printer.md)
 - [SUNMI printer library on Maven Central](https://central.sonatype.com/artifact/com.sunmi/printerlibrary)
+
+## Troubleshooting on macOS
+
+After installing the rebuilt APK, stop and restart the printer server, then run:
+
+```sh
+ipptool -tv ipp://Android.local:8631/ipp/print get-printer-attributes.test
+```
+
+This should no longer report the IPP/1.1-vs-2.0 version mismatch or the six previously missing printer attributes. macOS may still not offer AirPrint automatically because PWG Raster and Apple URF are not implemented. For now, do not choose a random DYMO/ESC-POS/PostScript/PCL driver.
+
+For a diagnostic, also test `lpadmin -p SUNMI_V2 -E -v ipp://Android.local:8631/ipp/print -m everywhere`. Failure after the attributes test can indicate additional printer-protocol compatibility gaps rather than a network problem.

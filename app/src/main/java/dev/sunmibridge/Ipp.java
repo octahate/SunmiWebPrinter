@@ -11,7 +11,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-/** Minimal binary IPP 1.1 codec; independent of Android for host-side tests. */
+/** Minimal binary IPP 1.1/2.0 codec; independent of Android for host-side tests. */
 public final class Ipp {
     private Ipp() {}
 
@@ -77,7 +77,10 @@ public final class Ipp {
         private final DataOutputStream out=new DataOutputStream(bytes);
         private String lastName=null;
         public Reply(Request request,int status) throws IOException {
-            out.writeByte(1); out.writeByte(1); out.writeShort(status); out.writeInt(request.id);
+            // Reply with the version used by the client. Hardcoding IPP/1.1
+            // makes CUPS ipptool and driverless macOS discovery reject IPP/2.0.
+            out.writeByte(request.major); out.writeByte(request.minor);
+            out.writeShort(status); out.writeInt(request.id);
             group(OPERATION);
             string(CHARSET,"attributes-charset","utf-8");
             string(LANGUAGE,"attributes-natural-language","en");

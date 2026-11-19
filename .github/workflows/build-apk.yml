@@ -31,6 +31,12 @@ jobs:
         with:
           gradle-version: '8.10.2'
 
+      - name: Test IPP protocol codec
+        run: |
+          mkdir -p build/ipp-codec-test
+          javac -d build/ipp-codec-test app/src/main/java/dev/sunmibridge/Ipp.java tests/IppCodecSmokeTest.java
+          java -cp build/ipp-codec-test IppCodecSmokeTest
+
       - name: Build debug APK
         run: gradle --no-daemon assembleDebug
 
